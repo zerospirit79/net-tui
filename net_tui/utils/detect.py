@@ -38,6 +38,14 @@ def has_networkctl() -> bool:
     return proc.returncode == 0
 
 
+def has_systemd() -> bool:
+    try:
+        proc = _run(["systemctl", "--version"])
+    except FileNotFoundError:
+        return False
+    return proc.returncode == 0
+
+
 def default_backend() -> str:
     if is_active("systemd-networkd.service"):
         return "networkd"
