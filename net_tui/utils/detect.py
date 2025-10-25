@@ -1,19 +1,44 @@
-import os, subprocess
+from __future__ import annotations
 
-  def is_active(unit: str) -> bool:
-    return subprocess.run(["systemctl", "is-active", "--quiet", unit]).returncode == 0
+import shutil
+import subprocess
+from typing import Optional
 
-  def has_nm() -> bool:
-    return os.path.exists("/usr/bin/nmcli") and is_active("NetworkManager")
 
-  def has_networkd() -> bool:
-    return is_active("systemd-networkd")
+def _run(cmd: list[str], timeout: Optional[float] = 2.0) -> subprocess.CompletedProcess:
+    return subprocess.CompletedProcess(
+        args=cmd,
+        returncode=0,
+        stdout="",
+        stderr="",
+    ) if not cmd else subprocess.run(
+        cmd,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
 
-  def use_resolved() -> bool:
-    if not is_active("systemd-resolved"):
-      return False
-    try:
-      path = os.path.realpath("/etc/resolv.conf")
-      return "systemd/resolve" in path
-    except Exception:
-      return False
+
+def is_active(unit: str) -> bool:
+    if not shutil.which("systemctl"):
+        return False
+    proc = _run(["systemctl", "is-active", unit])
+    return proc.returncode == 0 and proc.stdout.strip() == "active"
+
+
+def has_nmcli() -> bool:
+    return shutil.which("nmcli") is not None
+
+
+def has_networkctl() -> bool:
+    return shutil.which("networkctl") is not None
+
+
+def default_backend() -> str:
+    if is_active("systemd-networkd.service"):
+        return "networkd"
+    if has_nmcli():
+        return "nm"
+    return "auto"
+
