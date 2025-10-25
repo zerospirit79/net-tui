@@ -44,6 +44,6 @@ def render_hosts(entries: Iterable[dict]) -> str:
         if comment:
             base = f"{base}  # {comment}"
         lines.append(base)
-    return "n".join(lines) + ("n" if lines else "")
+    return "n".join(lines)
 
 format_hosts = render_hosts
