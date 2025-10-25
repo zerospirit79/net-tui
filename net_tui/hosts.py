@@ -7,7 +7,7 @@ from typing import Iterable, List, Dict
 @dataclass
 class HostEntry:
     ip: str
-    hosts: list[str] = field(default_factory=list)  
+    hosts: list[str] = field(default_factory=list)
     comment: str | None = None
     raw: str | None = None
 
@@ -21,7 +21,7 @@ def _strip_inline_comment(line: str) -> tuple[str, str | None]:
 
 def parse_hosts(text: str) -> list[dict]:
     entries: List[Dict] = []
-    for raw in text.splitlines():    
+    for raw in text.splitlines():
         stripped = raw.strip()
         if not stripped or stripped.startswith("#"):
             continue
@@ -41,7 +41,7 @@ def parse_hosts(text: str) -> list[dict]:
     return entries
 
 
-def format_hosts(entries: Iterable[dict]) -> str:
+def render_hosts(entries: Iterable[dict]) -> str:
     lines: list[str] = []
     for e in entries:
         ip = e.get("ip")
@@ -54,3 +54,6 @@ def format_hosts(entries: Iterable[dict]) -> str:
             base = f"{base}  # {comment}"
         lines.append(base)
     return "n".join(lines) + ("n" if lines else "")
+
+
+format_hosts = render_hosts
