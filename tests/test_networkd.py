@@ -3,7 +3,6 @@ from unittest.mock import patch
 from textwrap import dedent
 
 def test_generate_networkd_unit_basic():
-    # Предполагаем API generate_networkd_unit(cfg) -> str
     from net_tui.networkd import generate_networkd_unit
 
     cfg = {
@@ -15,7 +14,6 @@ def test_generate_networkd_unit_basic():
     assert "[Network]" in text and "DHCP=yes" in text
 
 def test_apply_networkd_configs_no_system_calls():
-    # Предполагаем apply_networkd_configs(configs) возвращает True при успехе.
     from net_tui.networkd import apply_networkd_configs
 
     configs = {
@@ -27,15 +25,12 @@ def test_apply_networkd_configs_no_system_calls():
         """).strip()
     }
 
-    # Мокаем subprocess.run чтобы не трогать систему
     def fake_run(*args, **kwargs):
         return subprocess.CompletedProcess(args=args[0], returncode=0, stdout="", stderr="")
     with patch("subprocess.run", side_effect=fake_run) as run:
         ok = apply_networkd_configs(configs)
         assert ok is True
-        # Убедимся, что вызывались перезагрузки/рестарты в разумных пределах
         called = " ".join(" ".join(a[0]) for a, _ in [(c.args, c.kwargs) for c in run.mock_calls if hasattr(c, "args")])
-        # Допустим, ожидаем, что фигурирует systemctl daemon-reload
         assert "systemctl" in called
 
 def test_generate_static_address_unit():

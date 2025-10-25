@@ -7,7 +7,7 @@ from typing import Iterable, List, Dict
 @dataclass
 class HostEntry:
     ip: str
-    hosts: list[str] = field(default_factory=list)  # ключ должен называться "hosts"
+    hosts: list[str] = field(default_factory=list)  
     comment: str | None = None
     raw: str | None = None
 

@@ -4,7 +4,6 @@ def test_import_package():
 
 def test_cli_help_runs():
     import subprocess, sys
-    # Проверяем, что CLI импортируется и показывает помощь
     p = subprocess.run([sys.executable, "-m", "net_tui", "--help"], capture_output=True, text=True)
     assert p.returncode == 0
     assert "net-tui" in p.stdout.lower()
