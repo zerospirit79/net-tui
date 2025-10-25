@@ -17,7 +17,7 @@
             python -m pip install --upgrade pip
             pip install -e . pytest build
         - name: Test
-          run: pytest -q —maxfail=1 —disable-warnings
+          run: pytest -q --maxfail=1 --disable-warnings -ra
         - name: Build wheel
           run: python -m build
   
