@@ -40,9 +40,9 @@ def render_hosts(entries: Iterable[dict]) -> str:
         comment = e.get("comment")
         if not ip or not hosts:
             continue
-        base = f"{ip}t{' '.join(hosts)}"
+        base = ip + "t" + " ".join(hosts)
         if comment:
-            base = f"{base}  # {comment}"
+            base += "  # " + comment
         lines.append(base)
     return "n".join(lines)
 
