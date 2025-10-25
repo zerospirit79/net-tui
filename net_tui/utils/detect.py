@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-import shutil
 import subprocess
 from typing import Optional
 
 
 def _run(cmd: list[str], timeout: Optional[float] = 2.0) -> subprocess.CompletedProcess:
-    return subprocess.CompletedProcess(
-        args=cmd,
-        returncode=0,
-        stdout="",
-        stderr="",
-    ) if not cmd else subprocess.run(
+    return subprocess.run(
         cmd,
         check=False,
         capture_output=True,
@@ -21,18 +15,27 @@ def _run(cmd: list[str], timeout: Optional[float] = 2.0) -> subprocess.Completed
 
 
 def is_active(unit: str) -> bool:
-    if not shutil.which("systemctl"):
+    try:
+        proc = _run(["systemctl", "is-active", unit])
+    except FileNotFoundError:
         return False
-    proc = _run(["systemctl", "is-active", unit])
     return proc.returncode == 0 and proc.stdout.strip() == "active"
 
 
 def has_nmcli() -> bool:
-    return shutil.which("nmcli") is not None
+    try:
+        proc = _run(["nmcli", "--version"])
+    except FileNotFoundError:
+        return False
+    return proc.returncode == 0
 
 
 def has_networkctl() -> bool:
-    return shutil.which("networkctl") is not None
+    try:
+        proc = _run(["networkctl", "--version"])
+    except FileNotFoundError:
+        return False
+    return proc.returncode == 0
 
 
 def default_backend() -> str:
@@ -41,4 +44,3 @@ def default_backend() -> str:
     if has_nmcli():
         return "nm"
     return "auto"
-
