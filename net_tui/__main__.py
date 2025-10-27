@@ -1,5 +1,4 @@
-from typer import Typer
-  app = Typer(help="net-tui: TUI/CLI for network settings on ALT p11")
+from .cli import main
 
   @app.command()
   def tui():

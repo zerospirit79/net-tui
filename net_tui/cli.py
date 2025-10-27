@@ -7,7 +7,7 @@ def build_parser():
     )
     return parser
 
-def main(argv=None):
+def main(argv=None) -> int:
     parser = build_parser()
     parser.parse_args(argv)
     return 0
