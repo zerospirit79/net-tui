@@ -1,4 +1,6 @@
-from typing import Any, Dict, Iterable, List, Union
+import os
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Union, Mapping, Sequence
 
 Value = Union[str, int, float]
 KV = Dict[str, Any]
@@ -73,3 +75,27 @@ def generate_networkd_unit(cfg: Cfg) -> str:
     if not body.endswith("n"):
         body += "n"
     return body
+
+def apply_networkd_configs(cfgs: Mapping[str, Cfg], target_dir: os.PathLike | str) -> Sequence[Path]:
+    """
+    Записывает набор конфигураций systemd-networkd в target_dir.
+    Никаких системных вызовов не делает.
+
+    :param cfgs: словарь: имя файла -> конфиг (секции и их ключи)
+    :param target_dir: каталог назначения (например, /etc/systemd/network или tmp-папка в тестах)
+    :return: список путей созданных/перезаписанных файлов
+    """
+    out_dir = Path(target_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    written: list[Path] = []
+    for filename, cfg in cfgs.items():
+        fname = os.path.basename(str(filename))
+        if not fname:
+            continue
+        text = generate_networkd_unit(cfg)
+        path = out_dir / fname
+        path.write_text(text, encoding="utf-8")
+        written.append(path)
+
+    return written
