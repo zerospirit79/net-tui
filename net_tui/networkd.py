@@ -78,10 +78,18 @@ def generate_networkd_unit(cfg: Cfg) -> str:
 
 def apply_networkd_configs(configs: Mapping[str, str]):
     written: list[Path] = []
+    cwd = Path.cwd()
+
     for path_str, text in configs.items():
-        path = Path(path_str)
+        orig = Path(path_str)
+        if orig.is_absolute():
+            path = cwd / str(orig).lstrip("/")
+        else:
+            path = Path(path_str)
+
         path.parent.mkdir(parents=True, exist_ok=True)
         data = text if text.endswith("n") else text + "n"
         path.write_text(data, encoding="utf-8")
         written.append(path)
+
     return written
