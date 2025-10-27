@@ -1,24 +1,31 @@
-[project]
-  name = "net-tui"
-  version = "0.1.0"
-  authors = [
-    {name = "Pavel Shilov", email = "zerospirit@altlinux.org"}
-    ]
-  description = "TUI/CLI for network settings on ALT p11 (NetworkManager, systemd-networkd, systemd-resolved)"
-  requires-python = ">=3.10"
-  dependencies = [
-    "textual>=0.58.0",
-    "typer>=0.12.0",
-    "pydantic>=2.7",
-    "psutil>=5.9",
-    "netifaces>=0.11"
-  ]
-  readme = "README.md"
-  license = {text = "MIT"}
+name = "net-tui"
+version = "0.1.0"
+authors = [
+  { name = "Pavel Shilov", email = "zerospirit@altlinux.org" }
+]
+description = "TUI/CLI for network settings on ALT p11 (NetworkManager, systemd-networkd, systemd-resolved)"
+requires-python = ">=3.10"
+dependencies = [
+  "textual>=0.58.0",
+  "typer>=0.12.0",
+  "pydantic>=2.7",
+  "psutil>=5.9",
+  "netifaces>=0.11"
+]
+readme = "README.md"
+license = { text = "MIT" }
 
-  [project.scripts]
-  net-tui = "net_tui.__main__:main"
+[project.scripts]
+net-tui = "net_tui.cli:main"
 
-  [build-system]
-  requires = ["setuptools>=68", "wheel", "build"]
-  build-backend = "setuptools.build_meta"
+[build-system]
+requires = ["setuptools>=68", "wheel", "build"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["net_tui*"]
+exclude = ["etc", "etc.*", "tests*", "scripts*", "dev*"]
