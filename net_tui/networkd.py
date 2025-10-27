@@ -70,4 +70,5 @@ def generate_networkd_unit(cfg: Cfg) -> str:
 
     body = "nn".join(s for s in sections if s).strip()
     if not body.endswith("n"):
-        body += "n
+        body += "n"
+    return body
