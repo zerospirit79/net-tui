@@ -1,6 +1,6 @@
 [project]
 name = "net-tui"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
   { name = "Pavel Shilov", email = "zerospirit@altlinux.org" }
 ]
@@ -17,11 +17,7 @@ readme = "README.md"
 license = { text = "MIT" }
 
 [project.scripts]
-net-tui = "net_tui.cli:main"
-
-[build-system]
-requires = ["setuptools>=68", "wheel", "build"]
-build-backend = "setuptools.build_meta"
+net-tui = "net_tui.cli:run"
 
 [tool.setuptools]
 include-package-data = true
@@ -30,3 +26,7 @@ include-package-data = true
 where = ["."]
 include = ["net_tui*"]
 exclude = ["etc", "etc.*", "tests*", "scripts*", "dev*"]
+
+[build-system]
+requires = ["setuptools>=68", "wheel", "build"]
+build-backend = "setuptools.build_meta"
