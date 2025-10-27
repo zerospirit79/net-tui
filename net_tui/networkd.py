@@ -76,18 +76,25 @@ def generate_networkd_unit(cfg: Cfg) -> str:
         body += "n"
     return body
 
-def apply_networkd_configs(configs: Mapping[str, str]) -> bool:
-    cwd = Path.cwd()
+def _map_to_writable_path(p: Path) -> Path:
+    if p.is_absolute():
+        return Path.cwd() / str(p).lstrip("/")
+    return p
 
+def apply_networkd_configs(configs: Mapping[str, str]) -> bool:
     for path_str, text in configs.items():
         orig = Path(path_str)
-        if orig.is_absolute():
-            path = cwd / str(orig).lstrip("/")
-        else:
-            path = Path(path_str)
-
+        path = _map_to_writable_path(orig)
         path.parent.mkdir(parents=True, exist_ok=True)
         data = text if text.endswith("n") else text + "n"
         path.write_text(data, encoding="utf-8")
+
+    cmds = [
+        ["systemctl", "daemon-reload"],
+        ["systemctl", "enable", "systemd-networkd"],
+        ["systemctl", "restart", "systemd-networkd"],
+    ]
+    for cmd in cmds:
+        subprocess.run(cmd, check=False)
 
     return True
