@@ -1,4 +1,4 @@
-from __future__ import annotations
+ from __future__ import annotations
 from dataclasses import dataclass, asdict, field
 from typing import Iterable, List, Dict, Tuple, Optional
 
@@ -15,7 +15,7 @@ def _strip_inline_comment(line: str) -> Tuple[str, Optional[str]]:
     before, _, after = line.partition("#")
     return before.rstrip(), (after.strip() or None)
 
- parse_hosts(text: str):
+def parse_hosts(text: str):
     entries = []
     for line in text.splitlines():
         raw = line
