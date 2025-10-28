@@ -1,5 +1,4 @@
 import os
-import sys
 from typing import Optional
 import typer
 
@@ -12,7 +11,7 @@ def should_color(force_color: Optional[bool]) -> bool:
         return True
     if os.environ.get("NO_COLOR"):
         return False
-    return True  # keep colors even in non-TTY by default
+    return True
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -23,9 +22,7 @@ app = typer.Typer(
 @app.callback()
 def _root(
     color: Optional[bool] = typer.Option(
-        None,
-        "--color/--no-color",
-        help="Enable or disable colored output.",
+        None, "--color/--no-color", help="Enable or disable colored output."
     )
 ):
     use_color = should_color(color)
@@ -43,9 +40,17 @@ def version():
 
 @app.command(help="Launch TUI interface")
 def tui():
-    from .tui import NetTuiApp
-    NetTuiApp().run()
+    try:
+        from .tui import run_tui
+    except Exception as e:
+        typer.secho(
+            "Failed to import TUI (net_tui.tui.run_tui). "
+            "Ensure Textual is installed and net_tui/tui/app.py defines run_tui().\n"
+            f"Original error: {e}",
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(code=2)
+    run_tui()
 
 def run(prog_name: str | None = None):
-    # Ensure help contains "net-tui" via prog_name or app help
     app(prog_name=prog_name or "net-tui")
