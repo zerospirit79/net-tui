@@ -12,7 +12,7 @@ def should_color(force_color: Optional[bool]) -> bool:
         return True
     if os.environ.get("NO_COLOR"):
         return False
-    return True
+    return True  # keep colors even in non-TTY by default
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -46,5 +46,6 @@ def tui():
     from .tui import NetTuiApp
     NetTuiApp().run()
 
-def run():
-    app()
+def run(prog_name: str | None = None):
+    # Ensure help contains "net-tui" via prog_name or app help
+    app(prog_name=prog_name or "net-tui")
