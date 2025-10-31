@@ -1,59 +1,42 @@
-  from dataclasses import dataclass
-  from typing import List, Optional
-  from net_tui.utils.validators import valid_ip, valid_hostname
-  from net_tui.utils.files import read_file, write_atomic
+rom __future__ import annotations
+from pathlib import Path
+import re
+from .utils import read_text_safe, write_text_safe
 
-  HOSTS_PATH = "/etc/hosts"
-  BEGIN = "# net-tui begin"
-  END = "# net-tui end"
+HOSTS_PATH = Path("/etc/hosts")
+_HOST_RE = re.compile(r"[A-Za-z0-9\-\.]{1,253}$")
 
-  @dataclass
-  class HostsEntry:
-    ip: str
-    names: List[str]
-    comment: Optional[str] = None
+def read_hosts() -> str:
+    return read_text_safe(HOSTS_PATH, default="")
 
-  def parse_hosts(text: str):
-    lines = text.splitlines()
-    return lines
+def write_hosts(content: str) -> None:
+    validate_hosts(content)
+    write_text_safe(HOSTS_PATH, content)
 
-  def serialize_hosts(lines):
-    return "n".join(lines) + ("n" if lines and not lines[-1].endswith("n") else "")
+def validate_hosts(content: str) -> None:
+    lines = content.splitlines()
+    for i, ln in enumerate(lines, 1):
+        s = ln.strip()
+        if not s or s.startswith("#"):
+            continue
+        parts = s.split()
+        if len(parts) < 2:
+            raise ValueError(f"/etc/hosts: строка {i}: ожидается 'IP host [alias...]'")
+        ip = parts[0]
+        if not (is_ipv4(ip) or is_ipv6(ip)):
+            raise ValueError(f"/etc/hosts: строка {i}: некорректный IP '{ip}'")
+        for h in parts[1:]:
+            if not _HOST_RE.fullmatch(h):
+                raise ValueError(f"/etc/hosts: строка {i}: некорректное имя '{h}'")
 
-  def list_entries() -> list[HostsEntry]:
-    text = read_file(HOSTS_PATH)
-    out = []
-    for ln in text.splitlines():
-      s = ln.strip()
-      if not s or s.startswith("#"):
-        continue
-      parts = s.split()
-      if not parts:
-        continue
-      ip = parts[0]
-      names = [p for p in parts[1:] if not p.startswith("#")]
-      if valid_ip(ip) and all(valid_hostname(n) for n in names):
-        out.append(HostsEntry(ip=ip, names=names))
-    return out
+def is_ipv4(ip: str) -> bool:
+    parts = ip.split(".")
+    if len(parts) != 4:
+        return False
+    try:
+        return all(p.isdigit() and 0 <= int(p) <= 255 for p in parts)
+    except ValueError:
+        return False
 
-  def add_entry(ip: str, names: list[str]):
-    if not valid_ip(ip):
-      raise ValueError("Invalid IP")
-    if not names or not all(valid_hostname(n) for n in names):
-      raise ValueError("Invalid hostnames")
-    text = read_file(HOSTS_PATH)
-    lines = text.splitlines()
-    lines.append(f"{ip}t{' '.join(names)}")
-    write_atomic(HOSTS_PATH, serialize_hosts(lines))
-
-  def delete_entry(ip: str):
-    text = read_file(HOSTS_PATH)
-    new_lines = []
-    for ln in text.splitlines():
-      s = ln.strip()
-      if s and not s.startswith("#") and s.split()[0] == ip:
-        continue
-      new_lines.append(ln)
-    write_atomic(HOSTS_PATH, serialize_hosts(new_lines))
-  
-
+def is_ipv6(ip: str) -> bool:
+  return ":" in ip
