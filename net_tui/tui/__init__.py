@@ -1,3 +1,4 @@
-from .app import run_tui
+from .app import NetTuiApp
 
-__all__ = ["run_tui"]
+def run_tui():
+    NetTuiApp().run()

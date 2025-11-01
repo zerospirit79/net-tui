@@ -1,6 +1,6 @@
   import psutil
   from net_tui.domain.models import InterfaceConfig
-  from net_tui.utils.detect import has_nm, has_networkd
+  from .utils.detect import has_nm, has_networkd
 
   def list_interfaces() -> list[InterfaceConfig]:
     out = []

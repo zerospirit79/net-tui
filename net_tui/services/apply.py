@@ -2,8 +2,8 @@
   from typing import Callable, List, Tuple
   import subprocess
   import time
-  from net_tui.utils.files import make_backup, write_atomic, read_file
-  from net_tui.utils.diff import unified_diff
+  from .utils.files import make_backup, write_atomic, read_file
+  from .utils.diff import unified_diff
 
   @dataclass
   class ApplyPlan:

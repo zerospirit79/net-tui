@@ -1,147 +1,84 @@
 from textual.app import App, ComposeResult
-from textual.widgets import TextLog, Input, Button, Static, TextArea, Label
-from textual.containers import Vertical, Horizontal
-from textual.reactive import reactive
+from textual.widgets import Button, Static
+from textual.containers import Vertical
+from textual.screen import Screen
 
-from net_tui.services.hostname import get_hostname, get_pretty_hostname, set_hostname
-from net_tui.services.hosts import read_hosts, write_hosts, validate_hosts
-from net_tui.services.dns import resolved_status, set_dns_for_interface, set_dns_domain_for_interface
+from net_tui.screens.hosts import HostsScreen
+from net_tui.screens.hostname import HostnameScreen
+from net_tui.screens.interfaces import InterfacesScreen
+from net_tui.screens.dns import DnsScreen
 
-class TextAreaHosts(TextArea):
-    """Многострочный редактор для /etc/hosts с базовым стилем."""
-    dirty: bool = reactive(False)
 
-    def watch_text(self, old: str, new: str) -> None:  # type: ignore[override]
-        self.dirty = (new != old) or self.dirty
+class StartScreen(Screen):
+    BINDINGS = [
+        ("1", "open_hosts", "Hosts"),
+        ("2", "open_hostname", "Hostname"),
+        ("3", "open_interfaces", "Interfaces"),
+        ("4", "open_dns", "DNS"),
+        ("q", "quit", "Quit"),
+        ("escape", "quit", "Quit"),
+    ]
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="start-menu"):
+            yield Static("Выберите действие:", id="menu-title")
+            yield Button("1. Внесение изменений в /etc/hosts", id="menu-hosts")
+            yield Button("2. Изменение hostname", id="menu-hostname")
+            yield Button("3. Настройка сетевых интерфейсов", id="menu-interfaces")
+            yield Button("4. Настройка DNS", id="menu-dns")
+            yield Button("Выход", id="menu-exit")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self._route(event.button.id)
+
+    def action_open_hosts(self) -> None:
+        self.app.push_screen("hosts")
+
+    def action_open_hostname(self) -> None:
+        self.app.push_screen("hostname")
+
+    def action_open_interfaces(self) -> None:
+        self.app.push_screen("interfaces")
+
+    def action_open_dns(self) -> None:
+        self.app.push_screen("dns")
+
+    def action_quit(self) -> None:
+        self.app.exit(0)
+
+    def _route(self, bid: str) -> None:
+        if bid == "menu-hosts":
+            self.app.push_screen("hosts")
+        elif bid == "menu-hostname":
+            self.app.push_screen("hostname")
+        elif bid == "menu-interfaces":
+            self.app.push_screen("interfaces")
+        elif bid == "menu-dns":
+            self.app.push_screen("dns")
+        elif bid == "menu-exit":
+            self.app.exit(0)
+
 
 class NetTuiApp(App):
     CSS = """
-    Screen {
-        layout: vertical;
+    #start-menu {
+        padding: 1;
+        height: 100%;
     }
-    #row1, #row2, #row3, #row4, #row5 {
-        height: auto;
-    }
-    TextLog {
-        height: 1fr;
-        border: tall;
-    }
-    Input, Button {
-        margin: 1 1;
-    }
-    #hosts_panel {
-        height: 12;
-        border: round;
-        margin: 1 1;
-    }
-    #hosts_actions {
-        height: auto;
-    }
-    TextArea {
-        height: 1fr;
+    #menu-title {
+        content-align: center middle;
+        height: 3;
     }
     """
 
-    def compose(self) -> ComposeResult:
-        yield Static("Network TUI", id="title")
-        with Vertical(id="row1"):
-            yield TextLog(id="log", highlight=False, wrap=True)
-        with Horizontal(id="row2"):
-            yield Input(placeholder="Новый hostname", id="hostname_input")
-            yield Button("Применить hostname", id="apply_hostname")
-        with Horizontal(id="row3"):
-            yield Input(placeholder="Интерфейс (например, eth0)", id="if_input")
-            yield Input(placeholder="DNS (через пробел, напр. 1.1.1.1 8.8.8.8)", id="dns_input")
-            yield Button("Применить DNS", id="apply_dns")
-        with Horizontal(id="row4"):
-            yield Input(placeholder="Домены поиска (через пробел)", id="domain_input")
-            yield Button("Применить домены", id="apply_domains")
-        with Vertical(id="row5"):
-            with Vertical(id="hosts_panel"):
-                yield Label("Редактор /etc/hosts")
-                yield TextAreaHosts(id="hosts_editor")
-                with Horizontal(id="hosts_actions"):
-                    yield Button("Сохранить /etc/hosts", id="hosts_save")
-                    yield Button("Отмена изменений", id="hosts_reset")
-                    yield Button("Обновить из файла", id="hosts_reload")
-
     def on_mount(self) -> None:
-        log = self.query_one("#log", TextLog)
-        log.write(f"Текущий hostname: {get_hostname()} (pretty: {get_pretty_hostname()})")
-        log.write("Статус DNS (resolvectl):")
-        log.write(resolved_status())
-        self._load_hosts_into_editor(initial=True)
-
-    def _load_hosts_into_editor(self, initial: bool = False) -> None:
-        log = self.query_one("#log", TextLog)
-        try:
-            hosts_data = read_hosts()
-            editor = self.query_one("#hosts_editor", TextAreaHosts)
-            editor.text = hosts_data
-            editor.dirty = False
-            if initial:
-                lines = hosts_data.strip().splitlines()
-                preview = "\n".join(lines[:10]) + ("\n..." if len(lines) > 10 else "")
-                log.write("/etc/hosts (первые строки):\n" + (preview or "<пусто>"))
-        except Exception as e:
-            log.write(f"Ошибка чтения /etc/hosts: {e}")
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        log = self.query_one("#log", TextLog)
-        bid = event.button.id
-
-        if bid == "apply_hostname":
-            new = self.query_one("#hostname_input", Input).value.strip()
-            try:
-                set_hostname(new)
-                log.write(f"OK: hostname → {get_hostname()}")
-            except Exception as e:
-                log.write(f"Ошибка применения hostname: {e}")
-
-        elif bid == "apply_dns":
-            ifname = self.query_one("#if_input", Input).value.strip()
-            servers = self.query_one("#dns_input", Input).value.strip().split()
-            try:
-                set_dns_for_interface(ifname, servers)
-                log.write(f"OK: DNS для {ifname} → {' '.join(servers)}")
-                log.write(resolved_status())
-            except Exception as e:
-                log.write(f"Ошибка применения DNS: {e}")
-
-        elif bid == "apply_domains":
-            ifname = self.query_one("#if_input", Input).value.strip()
-            domains = self.query_one("#domain_input", Input).value.strip().split()
-            try:
-                set_dns_domain_for_interface(ifname, domains)
-                log.write(f"OK: Домены для {ifname} → {' '.join(domains)}")
-                log.write(resolved_status())
-            except Exception as e:
-                log.write(f"Ошибка применения доменов: {e}")
-
-        elif bid == "hosts_save":
-            editor = self.query_one("#hosts_editor", TextAreaHosts)
-            data = editor.text
-            try:
-                validate_hosts(data)
-                write_hosts(data)
-                editor.dirty = False
-                log.write("OK: /etc/hosts сохранён")
-            except Exception as e:
-                log.write(f"Ошибка сохранения /etc/hosts: {e}")
-
-        elif bid == "hosts_reset":
-            try:
-                self._load_hosts_into_editor(initial=False)
-                log.write("Изменения отменены")
-            except Exception as e:
-                log.write(f"Ошибка отката: {e}")
-
-        elif bid == "hosts_reload":
-            try:
-                self._load_hosts_into_editor(initial=False)
-                log.write("Загружено из /etc/hosts")
-            except Exception as e:
-                log.write(f"Ошибка обновления: {e}")
+      self.install_screen(StartScreen(), name="start")
+      self.install_screen(HostsScreen(), name="hosts")
+      self.install_screen(HostnameScreen(), name="hostname")
+      self.install_screen(InterfacesScreen(), name="interfaces")
+      self.install_screen(DnsScreen(), name="dns")
+      self.push_screen("start")
+    
 
 if __name__ == "__main__":
     NetTuiApp().run()
