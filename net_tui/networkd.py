@@ -39,7 +39,7 @@ def _render_section(name: str, kv: KV) -> str:
             continue
         for item in _iter_values(val):
             lines.append(f"{key}={item}")
-    return "n".join(lines)
+    return "\n".join(lines)
 
 def generate_networkd_unit(cfg: Cfg) -> str:
     sections: List[str] = []
@@ -72,9 +72,9 @@ def generate_networkd_unit(cfg: Cfg) -> str:
                 if isinstance(item, dict):
                     sections.append(_render_section(sec_name, item))
 
-    body = "nn".join(s for s in sections if s).strip()
-    if not body.endswith("n"):
-        body += "n"
+    body = "\n\n".join(s for s in sections if s).strip()
+    if not body.endswith("\n"):
+        body += "\n"
     return body
 
 def _map_to_writable_path(p: Path) -> Path:
@@ -87,7 +87,7 @@ def apply_networkd_configs(configs: Mapping[str, str]) -> bool:
         orig = Path(path_str)
         path = _map_to_writable_path(orig)
         path.parent.mkdir(parents=True, exist_ok=True)
-        data = text if text.endswith("n") else text + "n"
+        data = text if text.endswith("\n") else text + "\n"
         path.write_text(data, encoding="utf-8")
 
     cmds = [

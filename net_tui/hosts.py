@@ -19,7 +19,7 @@ def parse_hosts(text: str):
     entries = []
     for line in text.splitlines():
         raw = line
-        line = line.rstrip("r")
+        line = line.rstrip("\r")
         comment = None
         if "#" in line:
             left, right = line.split("#", 1)
@@ -51,6 +51,6 @@ def render_hosts(entries):
         if e.get("comment"):
             line = f"{line} # {e['comment']}"
         lines.append(line)
-    return "n".join(lines)
+    return "\n".join(lines)
     
 format_hosts = render_hosts

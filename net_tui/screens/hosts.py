@@ -1,8 +1,16 @@
-from textual.screen import Screen
+from pathlib import Path
+
 from textual.app import ComposeResult
-from textual.widgets import TextArea, Button, Static
-from textual.containers import Vertical, Horizontal
-from net_tui.services.hosts import read_hosts, write_hosts, validate_hosts
+from textual.containers import Horizontal, Vertical
+from textual.screen import Screen
+from textual.widgets import Button, Static, TextArea
+
+from net_tui.screens.previewapply import PreviewApplyScreen
+from net_tui.services.apply import ApplyPlan
+from net_tui.services.hosts import read_hosts, validate_hosts
+
+HOSTS_PATH = "/etc/hosts"
+
 
 class HostsScreen(Screen):
     def compose(self) -> ComposeResult:
@@ -21,9 +29,23 @@ class HostsScreen(Screen):
             data = self.editor.text
             try:
                 validate_hosts(data)
-                write_hosts(data)
-                self.app.notify("Сохранено", severity="information")
             except Exception as e:
                 self.app.notify(str(e), severity="error")
+                return
+            old = read_hosts()
+            if data == old:
+                self.app.notify("Изменений нет", severity="information")
+                return
+            plan = ApplyPlan(file_changes=[(str(HOSTS_PATH), old, data)])
+            self.app.push_screen(
+                PreviewApplyScreen(plan, title="Применить изменения /etc/hosts?"),
+                self._on_apply_result,
+            )
         elif bid == "back":
             self.app.pop_screen()
+
+    def _on_apply_result(self, ok: bool) -> None:
+        if ok:
+            self.app.notify("Сохранено", severity="information")
+        else:
+            self.app.notify("Не удалось применить изменения", severity="error")

@@ -46,6 +46,14 @@ def has_systemd() -> bool:
     return proc.returncode == 0
 
 
+def has_nm() -> bool:
+    return has_nmcli()
+
+
+def has_networkd() -> bool:
+    return is_active("systemd-networkd.service") or has_networkctl()
+
+
 def default_backend() -> str:
     if is_active("systemd-networkd.service"):
         return "networkd"

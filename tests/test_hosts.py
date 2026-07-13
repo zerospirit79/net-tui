@@ -21,7 +21,7 @@ def test_parse_hosts_basic():
 def test_render_hosts_roundtrip():
     from net_tui.hosts import parse_hosts, render_hosts
 
-    original = "127.0.0.1 localhostn192.168.1.10 server1"
+    original = "127.0.0.1 localhost\n192.168.1.10 server1"
     data = parse_hosts(original)
     text = render_hosts(data)
     again = parse_hosts(text)
