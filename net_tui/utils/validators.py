@@ -2,7 +2,7 @@ import ipaddress
 import re
 
 LABEL_RE = r"(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)"
-HOST_RE = re.compile(rf"^{LABEL_RE}(?:.{LABEL_RE})*$")
+HOST_RE = re.compile(rf"^{LABEL_RE}(?:\.{LABEL_RE})*$")
 
 def valid_hostname(name: str) -> bool:
     if not isinstance(name, str):

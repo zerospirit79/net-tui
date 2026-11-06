@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-import re
+from net_tui.utils.validators import valid_ip, valid_hostname
 
 from .utils import read_text_safe, write_text_safe
 
 HOSTS_PATH = Path("/etc/hosts")
-_HOST_RE = re.compile(r"[A-Za-z0-9\-\.]{1,253}$")
 
 
 def read_hosts() -> str:
@@ -21,17 +20,17 @@ def write_hosts(content: str) -> None:
 def validate_hosts(content: str) -> None:
     lines = content.splitlines()
     for i, ln in enumerate(lines, 1):
-        s = ln.strip()
+        s = ln.split("#", 1)[0].strip()
         if not s or s.startswith("#"):
             continue
         parts = s.split()
         if len(parts) < 2:
             raise ValueError(f"/etc/hosts: строка {i}: ожидается 'IP host [alias...]'")
         ip = parts[0]
-        if not (is_ipv4(ip) or is_ipv6(ip)):
+        if not valid_ip(ip):
             raise ValueError(f"/etc/hosts: строка {i}: некорректный IP '{ip}'")
         for h in parts[1:]:
-            if not _HOST_RE.fullmatch(h):
+            if not valid_hostname(h):
                 raise ValueError(f"/etc/hosts: строка {i}: некорректное имя '{h}'")
 
 
@@ -46,4 +45,4 @@ def is_ipv4(ip: str) -> bool:
 
 
 def is_ipv6(ip: str) -> bool:
-    return ":" in ip
+    return ":" in ip and valid_ip(ip)

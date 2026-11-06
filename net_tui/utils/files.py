@@ -2,6 +2,7 @@ import os
 import shutil
 import tempfile
 import time
+import stat
 
 
 def read_file(path: str) -> str:
@@ -14,9 +15,8 @@ def read_file(path: str) -> str:
 
 def _backup_dir(base="/var/backups/net-tui") -> str:
     ts = time.strftime("%Y%m%d-%H%M%S")
-    path = os.path.join(base, ts)
-    os.makedirs(path, exist_ok=True)
-    return path
+    os.makedirs(base, exist_ok=True)
+    return tempfile.mkdtemp(prefix=ts + "-", dir=base)
 
 
 def make_backup(path: str, backup_root="/var/backups/net-tui") -> str:
@@ -29,14 +29,25 @@ def make_backup(path: str, backup_root="/var/backups/net-tui") -> str:
 
 
 def write_atomic(path: str, data: str, mode=0o644, backup_root="/var/backups/net-tui") -> str:
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    backup = make_backup(path, backup_root)
+    if os.path.islink(path):
+        raise ValueError(f"Отказ от замены символической ссылки: {path}")
     d = os.path.dirname(path) or "."
+    os.makedirs(d, exist_ok=True)
+    original = os.stat(path) if os.path.exists(path) else None
+    backup = make_backup(path, backup_root)
     fd, tmp = tempfile.mkstemp(dir=d, prefix=".tmp-net-tui-")
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        f.write(data)
-    os.chmod(tmp, mode)
-    os.replace(tmp, path)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(tmp, stat.S_IMODE(original.st_mode) if original else mode)
+        if original:
+            os.chown(tmp, original.st_uid, original.st_gid)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
     return backup
 
 

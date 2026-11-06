@@ -1,51 +1,51 @@
-from pathlib import Path
-
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
-from textual.screen import Screen
-from textual.widgets import Button, Static, TextArea
-
-from net_tui.screens.previewapply import PreviewApplyScreen
+from textual.widgets import Button, Input, Static, TextArea, Header, Footer
+from net_tui.screens.base import SettingsScreen
 from net_tui.services.apply import ApplyPlan
 from net_tui.services.hosts import read_hosts, validate_hosts
 
-HOSTS_PATH = "/etc/hosts"
 
+class HostsScreen(SettingsScreen):
+    BINDINGS = [Binding("f3", "add_entry", "Добавить хост", priority=True)]
 
-class HostsScreen(Screen):
+    def action_add_entry(self) -> None:
+        self.query_one("#add", Button).press()
+
     def compose(self) -> ComposeResult:
-        content = read_hosts()
-        with Vertical(id="hosts-root"):
-            yield Static("/etc/hosts", id="title")
-            self.editor = TextArea(text=content, id="hosts-editor")
-            yield self.editor
-            with Horizontal():
-                yield Button("Сохранить", id="save")
+        yield Header()
+        with Vertical(classes="page"):
+            yield Static("01 / ЛОКАЛЬНЫЕ ИМЕНА", classes="eyebrow")
+            yield Static("Хосты и адреса", classes="page-title")
+            yield Static("Добавьте запись: IP-адрес, имя и псевдонимы через пробел.", classes="subtitle")
+            yield Input(placeholder="192.168.1.10 dc.test5.alt dc", id="entry")
+            yield Button("Добавить запись", id="add")
+            yield TextArea(text=read_hosts(), id="hosts-editor", show_line_numbers=True, tab_behavior="focus")
+            with Horizontal(classes="actions"):
+                yield Button("Предпросмотр", variant="primary", id="save")
                 yield Button("Назад", id="back")
+        yield Footer()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        bid = event.button.id
-        if bid == "save":
-            data = self.editor.text
+        editor = self.query_one(TextArea)
+        if event.button.id == "add":
+            entry = self.query_one(Input).value.strip()
             try:
-                validate_hosts(data)
-            except Exception as e:
-                self.app.notify(str(e), severity="error")
-                return
-            old = read_hosts()
-            if data == old:
-                self.app.notify("Изменений нет", severity="information")
-                return
-            plan = ApplyPlan(file_changes=[(str(HOSTS_PATH), old, data)])
-            self.app.push_screen(
-                PreviewApplyScreen(plan, title="Применить изменения /etc/hosts?"),
-                self._on_apply_result,
-            )
-        elif bid == "back":
-            self.app.pop_screen()
-
-    def _on_apply_result(self, ok: bool) -> None:
-        if ok:
-            self.app.notify("Сохранено", severity="information")
-        else:
-            self.app.notify("Не удалось применить изменения", severity="error")
+                if not entry or entry.startswith("#"):
+                    raise ValueError("Введите IP-адрес и имя хоста")
+                validate_hosts(entry)
+                editor.load_text(editor.text.rstrip("\n") + "\n" + entry + "\n")
+                self.query_one(Input).value = ""
+            except ValueError as exc:
+                self.app.notify(str(exc), severity="error")
+        elif event.button.id == "save":
+            try:
+                validate_hosts(editor.text)
+                old = read_hosts()
+                if old == editor.text:
+                    self.app.notify("Изменений нет")
+                    return
+                self.preview(ApplyPlan(file_changes=[("/etc/hosts", old, editor.text)]), "Изменения /etc/hosts")
+            except ValueError as exc:
+                self.app.notify(str(exc), severity="error")

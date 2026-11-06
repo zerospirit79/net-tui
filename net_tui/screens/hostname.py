@@ -1,57 +1,30 @@
-import re
-from pathlib import Path
-
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
-from textual.screen import Screen
-from textual.widgets import Button, Input, Static
-
-from net_tui.screens.previewapply import PreviewApplyScreen
-from net_tui.services.apply import ApplyPlan
+from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.widgets import Button, Input, Static, Header, Footer
+from net_tui.screens.base import SettingsScreen, field
 from net_tui.services.hostname import get_hostname
-from net_tui.services.utils import read_text_safe
-
-_HOSTNAME_PATH = Path("/etc/hostname")
-_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9\-\.]{0,252}$")
+from net_tui.services.settings import hostname_plan
 
 
-class HostnameScreen(Screen):
+class HostnameScreen(SettingsScreen):
     def compose(self) -> ComposeResult:
-        current = get_hostname()
-        with Vertical(id="hostname-root"):
-            yield Static("Hostname", id="title")
-            self.input = Input(value=current, placeholder="новый hostname", id="hostname-input")
-            yield self.input
-            with Horizontal():
-                yield Button("Сохранить", id="save")
+        yield Header()
+        with Vertical(classes="page"):
+            yield Static("02 / ИДЕНТИФИКАЦИЯ", classes="eyebrow")
+            yield Static("Имя узла", classes="page-title")
+            yield Static("Полное доменное имя компьютера, например dc.test5.alt.", classes="subtitle")
+            with VerticalScroll(classes="form"):
+                yield from field("Новое имя узла", "dc.test5.alt", "hostname-input", get_hostname())
+                yield Static("Будут обновлены /etc/hostname, HOSTNAME в /etc/sysconfig/network\nи системное имя через hostnamectl set-hostname.", classes="subtitle")
+            with Horizontal(classes="actions"):
+                yield Button("Предпросмотр", variant="primary", id="save")
                 yield Button("Назад", id="back")
+        yield Footer()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        bid = event.button.id
-        if bid == "save":
-            name = self.input.value.strip()
-            current = get_hostname()
-            if name == current:
-                self.app.notify("Изменений нет", severity="information")
-                return
-            if not name or not _RE.fullmatch(name):
-                self.app.notify("Некорректный hostname", severity="error")
-                return
-            old = read_text_safe(_HOSTNAME_PATH, default=current + "\n")
-            new = name + "\n"
-            plan = ApplyPlan(
-                file_changes=[(str(_HOSTNAME_PATH), old, new)],
-                commands=[["hostnamectl", "set-hostname", name]],
-            )
-            self.app.push_screen(
-                PreviewApplyScreen(plan, title=f"Изменить hostname на {name}?"),
-                self._on_apply_result,
-            )
-        elif bid == "back":
-            self.app.pop_screen()
-
-    def _on_apply_result(self, ok: bool) -> None:
-        if ok:
-            self.app.notify("Сохранено", severity="information")
-        else:
-            self.app.notify("Не удалось применить изменения", severity="error")
+        if event.button.id == "save":
+            try:
+                plan = hostname_plan(self.query_one(Input).value.strip(), get_hostname())
+                self.preview(plan, "Изменение имени узла")
+            except (ValueError, OSError) as exc:
+                self.app.notify(str(exc), severity="error")

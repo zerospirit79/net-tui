@@ -11,7 +11,7 @@ class CmdError(RuntimeError):
         self.stdout = stdout
         self.stderr = stderr
 
-def run_cmd(cmd: str, check: bool = True, timeout: int | None = None, sudo: bool = False) -> str:
+def run_cmd(cmd: str, check: bool = True, timeout: int | None = 10, sudo: bool = False) -> str:
     full_cmd = f"sudo {cmd}" if sudo else cmd
     proc = subprocess.run(
         shlex.split(full_cmd),

@@ -1,9 +1,6 @@
 from __future__ import annotations
 import socket
-import re
 from .utils import run_cmd
-
-_HOST_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9\-\.]{0,62}$")
 
 def get_hostname() -> str:
     try:
@@ -20,8 +17,8 @@ def get_pretty_hostname() -> str:
         return get_hostname()
 
 def set_hostname(new_hostname: str) -> None:
-    if not new_hostname or new_hostname.strip() == "":
-        raise ValueError("Пустое имя хоста")
-    if not _HOST_RE.fullmatch(new_hostname):
-        raise ValueError("Недопустимое имя хоста: разрешены буквы/цифры/дефис/точка, длина ≤ 63")
-    run_cmd(f"hostnamectl set-hostname {new_hostname}", sudo=True)
+    from .settings import hostname_plan
+    from .apply import apply_plan
+    plan = hostname_plan(new_hostname.strip(), get_hostname())
+    if not apply_plan(plan):
+        raise RuntimeError(plan.error)

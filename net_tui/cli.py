@@ -39,7 +39,9 @@ def version():
     typer.echo(m.version("net-tui"))
 
 @app.command(help="Launch TUI interface")
-def tui():
+def tui(
+    mouse: bool = typer.Option(True, "--mouse/--no-mouse", help="Mouse support; use --no-mouse for server consoles and SSH.")
+):
     try:
         from .tui import run_tui
     except Exception as e:
@@ -50,7 +52,7 @@ def tui():
             fg=typer.colors.RED,
         )
         raise typer.Exit(code=2)
-    run_tui()
+    run_tui(mouse=mouse)
 
 def run(prog_name: str | None = None):
     app(prog_name=prog_name or "net-tui")

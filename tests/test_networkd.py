@@ -13,11 +13,11 @@ def test_generate_networkd_unit_basic():
     assert "[Match]" in text and "Name=eth0" in text
     assert "[Network]" in text and "DHCP=yes" in text
 
-def test_apply_networkd_configs_no_system_calls():
+def test_apply_networkd_configs_no_system_calls(tmp_path):
     from net_tui.networkd import apply_networkd_configs
 
     configs = {
-        "/etc/systemd/network/10-eth0.network": dedent("""
+        str(tmp_path / "10-eth0.network"): dedent("""
             [Match]
             Name=eth0
             [Network]

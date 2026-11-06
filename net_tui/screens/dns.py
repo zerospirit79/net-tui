@@ -1,46 +1,31 @@
-from pathlib import Path
-
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
-from textual.screen import Screen
-from textual.widgets import Button, Static, TextArea
-
-from net_tui.screens.previewapply import PreviewApplyScreen
-from net_tui.services.apply import ApplyPlan
-from net_tui.services.utils import read_text_safe
-
-_RESOLV = Path("/etc/resolv.conf")
+from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.widgets import Button, Input, Static, Header, Footer
+from net_tui.screens.base import SettingsScreen, field
+from net_tui.services.settings import read_resolvconf, resolvconf_plan
 
 
-class DnsScreen(Screen):
+class DnsScreen(SettingsScreen):
     def compose(self) -> ComposeResult:
-        content = read_text_safe(_RESOLV, default="")
-        with Vertical(id="dns-root"):
-            yield Static("/etc/resolv.conf", id="title")
-            self.editor = TextArea(text=content, id="dns-editor")
-            yield self.editor
-            with Horizontal():
-                yield Button("Сохранить", id="save")
+        values = read_resolvconf()
+        yield Header()
+        with Vertical(classes="page"):
+            yield Static("04 / РАЗРЕШЕНИЕ ИМЁН", classes="eyebrow")
+            yield Static("DNS и домен Samba", classes="page-title")
+            yield Static("Постоянные настройки resolvconf. Несколько значений разделяйте пробелами.", classes="subtitle")
+            with VerticalScroll(classes="form"):
+                yield from field("DNS-серверы / SERVERIP", "192.168.1.10", "servers", values.get("name_servers", ""))
+                yield from field("Домены поиска / DOMAINNAME", "test5.alt", "domains", values.get("search_domains", ""))
+                yield Static("Запишет name_servers и search_domains в /etc/resolvconf.conf\nи обновит конфигурацию командой resolvconf -u.", classes="subtitle")
+            with Horizontal(classes="actions"):
+                yield Button("Предпросмотр", variant="primary", id="save")
                 yield Button("Назад", id="back")
+        yield Footer()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        bid = event.button.id
-        if bid == "save":
-            data = self.editor.text
-            old = read_text_safe(_RESOLV, default="")
-            if data == old:
-                self.app.notify("Изменений нет", severity="information")
-                return
-            plan = ApplyPlan(file_changes=[(str(_RESOLV), old, data)])
-            self.app.push_screen(
-                PreviewApplyScreen(plan, title="Применить изменения /etc/resolv.conf?"),
-                self._on_apply_result,
-            )
-        elif bid == "back":
-            self.app.pop_screen()
-
-    def _on_apply_result(self, ok: bool) -> None:
-        if ok:
-            self.app.notify("Сохранено", severity="information")
-        else:
-            self.app.notify("Не удалось применить изменения", severity="error")
+        if event.button.id == "save":
+            try:
+                self.preview(resolvconf_plan(self.query_one("#servers", Input).value,
+                                            self.query_one("#domains", Input).value), "DNS и домен поиска")
+            except (ValueError, OSError) as exc:
+                self.app.notify(str(exc), severity="error")

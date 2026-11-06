@@ -1,5 +1,3 @@
-import os
-import subprocess
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union, Mapping
 
@@ -77,25 +75,14 @@ def generate_networkd_unit(cfg: Cfg) -> str:
         body += "\n"
     return body
 
-def _map_to_writable_path(p: Path) -> Path:
-    if p.is_absolute():
-        return Path.cwd() / str(p).lstrip("/")
-    return p
-
 def apply_networkd_configs(configs: Mapping[str, str]) -> bool:
-    for path_str, text in configs.items():
-        orig = Path(path_str)
-        path = _map_to_writable_path(orig)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        data = text if text.endswith("\n") else text + "\n"
-        path.write_text(data, encoding="utf-8")
+    from net_tui.services.apply import ApplyPlan, apply_plan
+    from net_tui.services.utils import read_text_safe
 
-    cmds = [
-        ["systemctl", "daemon-reload"],
-        ["systemctl", "enable", "systemd-networkd"],
-        ["systemctl", "restart", "systemd-networkd"],
-    ]
-    for cmd in cmds:
-        subprocess.run(cmd, check=False)
-
-    return True
+    plan = ApplyPlan(
+        file_changes=[(str(Path(path)), read_text_safe(path),
+                       text if text.endswith("\n") else text + "\n")
+                      for path, text in configs.items()],
+        restart_units=["systemd-networkd"],
+    )
+    return apply_plan(plan)
